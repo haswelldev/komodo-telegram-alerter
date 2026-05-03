@@ -1,5 +1,5 @@
 # Build output
-alerter
+/alerter
 
 # Environment files
 .env
