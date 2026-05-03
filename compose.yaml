@@ -1,8 +1,31 @@
 ---
 services:
   komodo-telegram-alerter:
-    image: sashabusinaro/komodo-telegram-alerter:latest
+    image: ghcr.io/haswelldev/komodo-telegram-alerter:latest
     container_name: komodo-telegram-alerter
     restart: unless-stopped
     ports:
       - '3000:3000'
+    environment:
+      PORT: 3000
+
+      # Override the ServerUnreachable template with a more concise format
+      TEMPLATE_SERVERUNREACHABLE: >-
+        {{emoji .Level}} <b>{{esc .Level}}</b> · ServerUnreachable {{resolvedIcon .Resolved}}
+        <b>Server:</b> {{esc (str (get .Data.Data "name"))}}
+        {{- with get .Data.Data "err"}}{{$e := .}}{{with get $e "error"}}
+        <b>Error:</b> <code>{{esc (str .)}}</code>{{end}}{{end}}
+
+      # Override StackStateChange to include a custom header line
+      TEMPLATE_STACKSTATECHANGE: >-
+        {{emoji .Level}} <b>Stack state changed</b> {{resolvedIcon .Resolved}}
+        <b>Stack:</b> {{esc (str (get .Data.Data "name"))}}
+        <b>Server:</b> {{esc (str (get .Data.Data "server_name"))}}
+        <b>Transition:</b> <code>{{esc (str (get .Data.Data "from"))}}</code> → <code>{{esc (str (get .Data.Data "to"))}}</code>
+
+      # Generic fallback for any alert type without a specific template
+      TEMPLATE_DEFAULT: >-
+        {{emoji .Level}} <b>{{esc .Level}}</b> · {{esc .Data.Type}} {{resolvedIcon .Resolved}}
+        {{- with (get .Data.Data "name") | str}}{{if .}}
+        <b>Name:</b> {{esc .}}{{end}}{{end}}
+        {{json .Data.Data}}

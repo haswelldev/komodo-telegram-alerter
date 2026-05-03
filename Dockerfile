@@ -1,20 +1,13 @@
-FROM node:22-alpine
+FROM golang:1.23-alpine AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -trimpath -o /out/alerter ./cmd/alerter
 
-RUN addgroup -S app && adduser -S app -G app
-
-WORKDIR /app
-
-COPY src/package*.json ./
-
-RUN npm ci --omit=dev --ignore-scripts && \
-    npm cache clean --force
-
-COPY src/server.js ./
-
-RUN chown -R app:app /app
-
-USER app
-
+FROM scratch
+COPY --from=build /out/alerter /alerter
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 EXPOSE 3000
-
-CMD ["node", "server.js"]
+USER 65534:65534
+ENTRYPOINT ["/alerter"]
